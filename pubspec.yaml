@@ -1,0 +1,22 @@
+name: social_embed_webview
+description: Provide a widget to easily embed social media post in flutter using web embed feature by the platform.
+version: 0.3.2
+homepage: https://github.com/aker99/social_embed_webview
+
+environment:
+  sdk: '>=2.17.3 <3.0.0'
+  flutter: ">=2.0.2 <3.3.5"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  webview_flutter: ^3.0.4
+  url_launcher: ^6.1.6
+  localstorage: ^4.0.0+1
+  http: ^0.13.5
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
