@@ -27,13 +27,13 @@ class _SocialEmbedState extends State<SocialEmbed> with WidgetsBindingObserver {
     super.initState();
     // htmlBody = ;
     if (widget.socialMediaObj.supportMediaControll)
-      WidgetsBinding.instance!.addObserver(this);
+      WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void dispose() {
     if (widget.socialMediaObj.supportMediaControll)
-      WidgetsBinding.instance!.removeObserver(this);
+      WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
@@ -43,11 +43,11 @@ class _SocialEmbedState extends State<SocialEmbed> with WidgetsBindingObserver {
       case AppLifecycleState.resumed:
         break;
       case AppLifecycleState.detached:
-        wbController.evaluateJavascript(widget.socialMediaObj.stopVideoScript);
+        wbController.runJavascript(widget.socialMediaObj.stopVideoScript);
         break;
       case AppLifecycleState.inactive:
       case AppLifecycleState.paused:
-        wbController.evaluateJavascript(widget.socialMediaObj.pauseVideoScript);
+        wbController.runJavascript(widget.socialMediaObj.pauseVideoScript);
         break;
     }
   }
@@ -56,8 +56,8 @@ class _SocialEmbedState extends State<SocialEmbed> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final wv = WebView(
         initialUrl: htmlToURI(getHtmlBody()),
-        javascriptChannels:
-            <JavascriptChannel>[_getHeightJavascriptChannel()].toSet(),
+        // javascriptChannels:
+        //     <JavascriptChannel>[_getHeightJavascriptChannel()].toSet(),
         javascriptMode: JavascriptMode.unrestricted,
         initialMediaPlaybackPolicy: AutoMediaPlaybackPolicy.always_allow,
         onWebViewCreated: (wbc) {
@@ -65,16 +65,16 @@ class _SocialEmbedState extends State<SocialEmbed> with WidgetsBindingObserver {
         },
         onPageFinished: (str) {
           final color = colorToHtmlRGBA(getBackgroundColor(context));
-          wbController.evaluateJavascript(
+          wbController.runJavascript(
               'document.body.style= "background-color: $color"');
           if (widget.socialMediaObj.aspectRatio == null)
             wbController
-                .evaluateJavascript('setTimeout(() => sendHeight(), 0)');
+                .runJavascript('setTimeout(() => sendHeight(), 0)');
         },
         navigationDelegate: (navigation) async {
           final url = navigation.url;
           if (navigation.isForMainFrame && await canLaunch(url)) {
-            launch(url);
+            launchUrl(Uri.parse(url));
             return NavigationDecision.prevent;
           }
           return NavigationDecision.navigate;
@@ -91,13 +91,13 @@ class _SocialEmbedState extends State<SocialEmbed> with WidgetsBindingObserver {
         : SizedBox(height: _height, child: wv);
   }
 
-  JavascriptChannel _getHeightJavascriptChannel() {
-    return JavascriptChannel(
-        name: 'PageHeight',
-        onMessageReceived: (JavascriptMessage message) {
-          _setHeight(double.parse(message.message));
-        });
-  }
+  // JavascriptChannel _getHeightJavascriptChannel() {
+  //   return JavascriptChannel(
+  //       name: 'PageHeight',
+  //       onMessageReceived: (JavascriptMessage message) {
+  //         _setHeight(double.parse(message.message));
+  //       });
+  // }
 
   void _setHeight(double height) {
     setState(() {
