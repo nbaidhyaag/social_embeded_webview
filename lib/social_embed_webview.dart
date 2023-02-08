@@ -56,8 +56,8 @@ class _SocialEmbedState extends State<SocialEmbed> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final wv = WebView(
         initialUrl: htmlToURI(getHtmlBody()),
-        // javascriptChannels:
-        //     <JavascriptChannel>[_getHeightJavascriptChannel()].toSet(),
+        javascriptChannels:
+            <JavascriptChannel>[_getHeightJavascriptChannel()].toSet(),
         javascriptMode: JavascriptMode.unrestricted,
         initialMediaPlaybackPolicy: AutoMediaPlaybackPolicy.always_allow,
         onWebViewCreated: (wbc) {
@@ -91,13 +91,13 @@ class _SocialEmbedState extends State<SocialEmbed> with WidgetsBindingObserver {
         : SizedBox(height: _height, child: wv);
   }
 
-  // JavascriptChannel _getHeightJavascriptChannel() {
-  //   return JavascriptChannel(
-  //       name: 'PageHeight',
-  //       onMessageReceived: (JavascriptMessage message) {
-  //         _setHeight(double.parse(message.message));
-  //       });
-  // }
+  JavascriptChannel _getHeightJavascriptChannel() {
+    return JavascriptChannel(
+        name: 'PageHeight',
+        onMessageReceived: (JavascriptMessage message) {
+          _setHeight(double.parse(message.message));
+        });
+  }
 
   void _setHeight(double height) {
     setState(() {
