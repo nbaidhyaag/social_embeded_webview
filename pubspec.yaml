@@ -10,10 +10,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  webview_flutter: ^3.0.4
-  url_launcher: ^6.1.6
-  localstorage: ^4.0.0+1
-  http: ^0.13.5
+  webview_flutter: ^4.2.2
+  url_launcher: ^6.1.11
+  localstorage: ^4.0.1+2
+  http: ^1.0.0
 
 
 dev_dependencies:
