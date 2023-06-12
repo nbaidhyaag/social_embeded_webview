@@ -5,6 +5,8 @@ import 'package:social_embed_webview/platforms/social-media-generic.dart';
 import 'package:social_embed_webview/utils/common-utils.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
+import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 
 class SocialEmbed extends StatefulWidget {
   final SocialMediaGenericEmbedData socialMediaObj;
@@ -21,19 +23,54 @@ class _SocialEmbedState extends State<SocialEmbed> with WidgetsBindingObserver {
   double _height = 300;
   late final WebViewController wbController;
   late String htmlBody;
-
+  final PlatformWebViewControllerCreationParams params =
+      (WebViewPlatform.instance is WebKitWebViewPlatform)
+          ? WebKitWebViewControllerCreationParams(
+              allowsInlineMediaPlayback: true,
+              mediaTypesRequiringUserAction: const <PlaybackMediaTypes>{},
+            )
+          : const PlatformWebViewControllerCreationParams();
+  late WebViewController webcontroller;
   @override
   void initState() {
     super.initState();
-    // htmlBody = ;
     if (widget.socialMediaObj.supportMediaControll)
-      WidgetsBinding.instance!.addObserver(this);
+      WidgetsBinding.instance.addObserver(this);
+
+    webcontroller = WebViewController.fromPlatformCreationParams(params);
+    webcontroller
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..addJavaScriptChannel('PageHeight',
+          onMessageReceived: (JavaScriptMessage message) {
+        _setHeight(double.parse(message.message));
+      })
+      ..setNavigationDelegate(NavigationDelegate(onPageFinished: (str) {
+        final color = colorToHtmlRGBA(getBackgroundColor(context));
+        wbController
+            .runJavaScript('document.body.style= "background-color: $color"');
+        if (widget.socialMediaObj.aspectRatio == null)
+          wbController.runJavaScript('setTimeout(() => sendHeight(), 0)');
+      }, onNavigationRequest: (NavigationRequest request) async {
+        final url = Uri.parse(request.url);
+        if (request.isMainFrame && await canLaunchUrl(url)) {
+          launchUrl(url);
+          return NavigationDecision.prevent;
+        }
+        return NavigationDecision.navigate;
+      }))
+      ..loadRequest(htmlToURI(getHtmlBody()) as Uri);
+
+    if (webcontroller.platform is AndroidWebViewController) {
+      AndroidWebViewController.enableDebugging(true);
+      (webcontroller.platform as AndroidWebViewController)
+          .setMediaPlaybackRequiresUserGesture(false);
+    }
   }
 
   @override
   void dispose() {
     if (widget.socialMediaObj.supportMediaControll)
-      WidgetsBinding.instance!.removeObserver(this);
+      WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
@@ -43,42 +80,51 @@ class _SocialEmbedState extends State<SocialEmbed> with WidgetsBindingObserver {
       case AppLifecycleState.resumed:
         break;
       case AppLifecycleState.detached:
-        wbController.evaluateJavascript(widget.socialMediaObj.stopVideoScript);
+        // wbController.evaluateJavascript(widget.socialMediaObj.stopVideoScript);
+        wbController.runJavaScript(widget.socialMediaObj.stopVideoScript);
+
         break;
       case AppLifecycleState.inactive:
       case AppLifecycleState.paused:
-        wbController.evaluateJavascript(widget.socialMediaObj.pauseVideoScript);
+        wbController.runJavaScript(widget.socialMediaObj.pauseVideoScript);
+        // wbController.evaluateJavascript(widget.socialMediaObj.pauseVideoScript);
         break;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final wv = WebView(
-        initialUrl: htmlToURI(getHtmlBody()),
-        javascriptChannels:
-            <JavascriptChannel>[_getHeightJavascriptChannel()].toSet(),
-        javascriptMode: JavascriptMode.unrestricted,
-        initialMediaPlaybackPolicy: AutoMediaPlaybackPolicy.always_allow,
-        onWebViewCreated: (wbc) {
-          wbController = wbc;
-        },
-        onPageFinished: (str) {
-          final color = colorToHtmlRGBA(getBackgroundColor(context));
-          wbController.evaluateJavascript(
-              'document.body.style= "background-color: $color"');
-          if (widget.socialMediaObj.aspectRatio == null)
-            wbController
-                .evaluateJavascript('setTimeout(() => sendHeight(), 0)');
-        },
-        navigationDelegate: (navigation) async {
-          final url = navigation.url;
-          if (navigation.isForMainFrame && await canLaunch(url)) {
-            launch(url);
-            return NavigationDecision.prevent;
-          }
-          return NavigationDecision.navigate;
-        });
+    final wv = WebViewWidget(
+      controller: webcontroller,
+    );
+    //  WebView(
+    //  initialUrl: htmlToURI(getHtmlBody()),
+    //     javascriptChannels:
+    //         <JavascriptChannel>[_getHeightJavascriptChannel()].toSet(),
+    //     javascriptMode: JavascriptMode.unrestricted,
+
+    //     initialMediaPlaybackPolicy: AutoMediaPlaybackPolicy.always_allow,
+    //     onWebViewCreated: (wbc) {
+    //       wbController = wbc;
+    //     },
+
+    //     onPageFinished: (str) {
+    //       final color = colorToHtmlRGBA(getBackgroundColor(context));
+    //       wbController.evaluateJavascript(
+    //           'document.body.style= "background-color: $color"');
+    //       if (widget.socialMediaObj.aspectRatio == null)
+    //         wbController
+    //             .evaluateJavascript('setTimeout(() => sendHeight(), 0)');
+    //     },
+    //     navigationDelegate: (navigation) async {
+    //       final url = navigation.url;
+    //       if (navigation.isForMainFrame && await canLaunch(url)) {
+    //         launch(url);
+    //         return NavigationDecision.prevent;
+    //       }
+    //       return NavigationDecision.navigate;
+    //     });
+
     final ar = widget.socialMediaObj.aspectRatio;
     return (ar != null)
         ? ConstrainedBox(
@@ -91,13 +137,13 @@ class _SocialEmbedState extends State<SocialEmbed> with WidgetsBindingObserver {
         : SizedBox(height: _height, child: wv);
   }
 
-  JavascriptChannel _getHeightJavascriptChannel() {
-    return JavascriptChannel(
-        name: 'PageHeight',
-        onMessageReceived: (JavascriptMessage message) {
-          _setHeight(double.parse(message.message));
-        });
-  }
+  // JavascriptChannel _getHeightJavascriptChannel() {
+  //   return JavascriptChannel(
+  //       name: 'PageHeight',
+  //       onMessageReceived: (JavascriptMessage message) {
+  //         _setHeight(double.parse(message.message));
+  //       });
+  // }
 
   void _setHeight(double height) {
     setState(() {
